@@ -1,1 +1,7 @@
 @import url('base.css');
+
+[data-command="jlab-examples/log-messages:logTextMessage"] > svg {
+	height: 24px;
+	width: 24px;
+	transform: scale(0.7);
+}

@@ -3,7 +3,11 @@
     "Notebook": [
       {
         "name": "clear-all-outputs",
-        "command": "notebook:clear-all-cell-outputs"
+        "command": "jlab-examples/log-messages:logTextMessage"
+      },
+      {
+        "name": "clear-all-outputs2",
+        "command": "jlab-examples/log-messages:uploadTextMessage"
       }
     ]
   },
