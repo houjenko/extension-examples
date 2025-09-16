@@ -59,7 +59,7 @@ const extension: JupyterFrontEndPlugin<void> = {
     }
 
     async function callNewPR(data: string, filepath: string) {
-      const url = "https://github.com/intel-sandbox/jupyterlite/edit/main/content/" +
+      const url = "https://github.com/intel-sandbox/jupyterlite/new/main/content/" +
         filepath;
       navigator.clipboard.writeText(data);
       alert('Copied the Jupyter notebook to the clipboard.\nPlease paste the content to the opened page as a commit.');
