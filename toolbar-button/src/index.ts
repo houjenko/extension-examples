@@ -5,6 +5,7 @@ import {
 } from '@jupyterlab/application';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { LabIcon } from '@jupyterlab/ui-components';
+import { parse as yamlParse } from 'yaml';
 import linkGenSVG from '../link.svg';
 import uploadSVG from '../upload.svg';
 
@@ -18,6 +19,7 @@ const uploadIcon = new LabIcon({
   svgstr: uploadSVG
 });
 
+// dotenv.config();
 
 const extension: JupyterFrontEndPlugin<void> = {
   id: '@jupyterlab-examples/toolbar-button:plugin',
@@ -58,17 +60,65 @@ const extension: JupyterFrontEndPlugin<void> = {
       xhr.send(form);
     }
 
+    async function checkGitHubFileExists(filePath: string) {
+      return new Promise((resolve) => {
+        const owner = 'intel-sandbox';
+        const repo = 'jupyterlite';
+        const url = 'https://pisa.intel.com/API/GH/Exist';
+        var form = new FormData();
+
+        form.append("Owner", owner);
+        form.append("Repo", repo);
+        form.append("FilePath", 'content/' + filePath);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.withCredentials = true;
+
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            try {
+              const data = yamlParse(xhr.responseText);
+
+              // Now 'data' is a JavaScript object representing the YAML structure
+              const returnCode = data.ReturnCode;
+
+              console.log("Return Code:", returnCode);
+              if (returnCode == 0)
+                resolve(true);
+              else
+                resolve(false);
+            } catch (e) {
+              console.error("Error parsing YAML:", e);
+              resolve(false);
+            }
+          } else {
+            console.error('Network error or other issue');
+            resolve(false);
+          }
+        };
+        xhr.send(form);
+      });
+    }
+
     async function callNewPR(data: string, filepath: string) {
-      const url = "https://github.com/intel-sandbox/jupyterlite/new/main/content/" +
-        filepath;
-      navigator.clipboard.writeText(data);
-      alert('Copied the Jupyter notebook to the clipboard.\nPlease paste the content to the opened page as a commit.');
-      const newTab = window.open(url, '_blank');
-      if (newTab) {
-        newTab.focus();
-      } else {
-        console.error("The new tab cannot be opened");
-      }
+      checkGitHubFileExists(filepath)
+        .then(exists => {
+          var url = '';
+          if (exists) {
+            url = "https://github.com/intel-sandbox/jupyterlite/edit/main/content/" + filepath;
+          } else {
+            url = "https://github.com/intel-sandbox/jupyterlite/new/main/content/?filename=" + filepath;
+          }
+          navigator.clipboard.writeText(data);
+          alert('Copied the Jupyter notebook to the clipboard.\nPlease paste the content to the opened page as a commit.');
+          const newTab = window.open(url, '_blank');
+          if (newTab) {
+            newTab.focus();
+          } else {
+            console.error("The new tab cannot be opened");
+          }
+        });
     }
 
     commands.addCommand('jlab-examples/log-messages:logTextMessage', {
