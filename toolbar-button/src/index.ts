@@ -5,6 +5,7 @@ import {
 } from '@jupyterlab/application';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { LabIcon } from '@jupyterlab/ui-components';
+import { parse as yamlParse } from 'yaml';
 import linkGenSVG from '../link.svg';
 import uploadSVG from '../upload.svg';
 
@@ -18,6 +19,7 @@ const uploadIcon = new LabIcon({
   svgstr: uploadSVG
 });
 
+// dotenv.config();
 
 const extension: JupyterFrontEndPlugin<void> = {
   id: '@jupyterlab-examples/toolbar-button:plugin',
@@ -58,32 +60,49 @@ const extension: JupyterFrontEndPlugin<void> = {
       xhr.send(form);
     }
 
-    async function checkGitHubFileExists(filePath: string, token: string) {
-      const url = `https://api.github.com/repos/intel-sandbox/jupyterlite/contents/content/${filePath}`;
+    async function checkGitHubFileExists(filePath: string) {
+      return new Promise((resolve) => {
+        const owner = 'intel-sandbox';
+        const repo = 'jupyterlite';
+        const url = 'https://pisa.intel.com/API/GH/Exist';
+        var form = new FormData();
 
-      try {
-        const response = await fetch(url, { headers: {'Authorization': `token ${token}`} });
-        if (response.status === 200) {
-          // File exists
-          return true;
-        } else if (response.status === 404) {
-          // File not found
-          return false;
-        } else {
-          // Other error (e.g., unauthorized, rate limit exceeded)
-          console.error(`Error checking file existence: ${response.status} - ${response.statusText}`);
-          return false; // Or throw an error
-        }
-      } catch (error) {
-        console.error('Network error or other issue:', error);
-        return false;
-      }
+        form.append("Owner", owner);
+        form.append("Repo", repo);
+        form.append("FilePath", 'content/' + filePath);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.withCredentials = true;
+
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            try {
+              const data = yamlParse(xhr.responseText);
+
+              // Now 'data' is a JavaScript object representing the YAML structure
+              const returnCode = data.ReturnCode;
+
+              console.log("Return Code:", returnCode);
+              if (returnCode == 0)
+                resolve(true);
+              else
+                resolve(false);
+            } catch (e) {
+              console.error("Error parsing YAML:", e);
+              resolve(false);
+            }
+          } else {
+            console.error('Network error or other issue');
+            resolve(false);
+          }
+        };
+        xhr.send(form);
+      });
     }
 
     async function callNewPR(data: string, filepath: string) {
-      require('dotenv').config();
-      const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-      checkGitHubFileExists(filepath, GITHUB_TOKEN)
+      checkGitHubFileExists(filepath)
         .then(exists => {
           var url = '';
           if (exists) {
